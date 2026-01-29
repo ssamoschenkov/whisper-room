@@ -4,10 +4,11 @@ import { TranscriptionEditor } from '@/components/TranscriptionEditor';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { EmptyState } from '@/components/EmptyState';
 import { RecordingDialog } from '@/components/RecordingDialog';
-import { useTranscriptionStore } from '@/hooks/useTranscriptionStore';
+import { useTranscriptionApi } from '@/hooks/useTranscriptionApi';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 const ACCEPTED_FORMATS = '.mp3,.m4a,.wav,.webm,.ogg';
 
@@ -19,6 +20,7 @@ export default function Index() {
     files,
     activeFile,
     activeFileId,
+    isBackendAvailable,
     setActiveFileId,
     addFile,
     addRecording,
@@ -28,7 +30,7 @@ export default function Index() {
     updateSegment,
     updateSpeakerName,
     replaceAllText,
-  } = useTranscriptionStore();
+  } = useTranscriptionApi();
 
   const {
     isPlaying,
@@ -59,21 +61,25 @@ export default function Index() {
     }
   }, [activeFile?.id, activeFile?.audioUrl, loadAudio]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = e.target.files;
     if (!uploadedFiles) return;
 
-    Array.from(uploadedFiles).forEach(file => {
+    for (const file of Array.from(uploadedFiles)) {
       if (file.size > 300 * 1024 * 1024) {
         toast.error(`Файл ${file.name} превышает лимит 300МБ`);
-        return;
+        continue;
       }
-      const id = addFile(file);
-      if (!activeFileId) {
-        setActiveFileId(id);
+      try {
+        const id = await addFile(file);
+        if (!activeFileId) {
+          setActiveFileId(id);
+        }
+        toast.success(`Файл "${file.name}" добавлен`);
+      } catch (error) {
+        // Error already handled in addFile
       }
-      toast.success(`Файл "${file.name}" добавлен`);
-    });
+    }
 
     e.target.value = '';
   };
@@ -82,7 +88,7 @@ export default function Index() {
     const blob = await stopRecording();
     if (blob) {
       const name = `Запись ${new Date().toLocaleString('ru-RU')}.webm`;
-      const id = addRecording(blob, name);
+      const id = await addRecording(blob, name);
       setActiveFileId(id);
       setRecordingDialogOpen(false);
       toast.success('Запись сохранена');
@@ -124,6 +130,7 @@ export default function Index() {
           onUploadClick={() => fileInputRef.current?.click()}
           onRecordClick={handleRecordClick}
           isRecording={isRecording}
+          isBackendAvailable={isBackendAvailable}
         />
       </aside>
 

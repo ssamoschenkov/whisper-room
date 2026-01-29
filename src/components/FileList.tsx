@@ -1,9 +1,11 @@
-import { Upload, Mic, Play, Trash2, Loader2 } from 'lucide-react';
+import { Upload, Mic, Play, Trash2, Loader2, Server, ServerOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { formatFileSize, formatDate, getFileExtension, getStatusLabel } from '@/utils/formatters';
 import type { AudioFile } from '@/types/transcription';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface FileListProps {
   files: AudioFile[];
@@ -15,6 +17,7 @@ interface FileListProps {
   onUploadClick: () => void;
   onRecordClick: () => void;
   isRecording: boolean;
+  isBackendAvailable: boolean | null;
 }
 
 export function FileList({
@@ -27,6 +30,7 @@ export function FileList({
   onUploadClick,
   onRecordClick,
   isRecording,
+  isBackendAvailable,
 }: FileListProps) {
   const pendingCount = files.filter(f => f.status === 'pending').length;
 
@@ -34,7 +38,31 @@ export function FileList({
     <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">
-        <h1 className="text-lg font-semibold mb-3">Транскриптор</h1>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-lg font-semibold">Транскриптор</h1>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5">
+                  {isBackendAvailable === null ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-sidebar-muted" />
+                  ) : isBackendAvailable ? (
+                    <Server className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <ServerOff className="w-4 h-4 text-amber-400" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isBackendAvailable === null 
+                  ? 'Проверка подключения...'
+                  : isBackendAvailable 
+                    ? 'Backend подключён' 
+                    : 'Демо-режим (backend недоступен)'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
@@ -145,6 +173,16 @@ function FileRow({ file, isActive, onSelect, onDelete, onTranscribe }: FileRowPr
           {getStatusLabel(file.status)}
         </Badge>
       </div>
+
+      {/* Progress bar for processing files */}
+      {file.status === 'processing' && file.progress !== undefined && (
+        <div className="mt-2 mb-1">
+          <Progress value={file.progress} className="h-1.5" />
+          <p className="text-[10px] text-sidebar-muted mt-1 text-right">
+            {file.progress}%
+          </p>
+        </div>
+      )}
       
       <div className="flex items-center justify-between mt-2">
         <span className="text-[10px] text-sidebar-muted">

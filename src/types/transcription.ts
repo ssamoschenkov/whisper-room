@@ -15,6 +15,7 @@ export interface AudioFile {
   size: number;
   createdAt: Date;
   status: FileStatus;
+  progress?: number; // 0-100 for processing status
   duration?: number;
   segments?: TranscriptionSegment[];
   audioUrl?: string;
