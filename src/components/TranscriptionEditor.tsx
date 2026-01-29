@@ -20,7 +20,7 @@ interface TranscriptionEditorProps {
   onSeekTo: (time: number) => void;
   onUpdateSegment: (segmentId: string, updates: Partial<TranscriptionSegment>) => void;
   onUpdateSpeakerName: (oldName: string, newName: string) => void;
-  onReplaceAll: (search: string, replace: string) => number;
+  onReplaceAll: (search: string, replace: string) => number | Promise<number>;
   onDeleteFile: () => void;
 }
 
@@ -51,9 +51,9 @@ export function TranscriptionEditor({
     }
   }, [currentSegmentIndex]);
 
-  const handleReplaceAll = () => {
+  const handleReplaceAll = async () => {
     if (!searchText.trim()) return;
-    const count = onReplaceAll(searchText, replaceText);
+    const count = await onReplaceAll(searchText, replaceText);
     if (count > 0) {
       toast.success(`Заменено: ${count} вхождений`);
       setSearchText('');
