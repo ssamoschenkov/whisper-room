@@ -244,6 +244,24 @@ export function useTranscriptionApi() {
     }
   }, [isBackendAvailable]);
 
+  const deleteSegment = useCallback(async (
+    fileId: string,
+    segmentId: string
+  ) => {
+    // Update locally
+    setFiles(prev => prev.map(f => {
+      if (f.id !== fileId || !f.segments) return f;
+      return {
+        ...f,
+        segments: f.segments.filter(s => s.id !== segmentId),
+      };
+    }));
+
+    // Note: Backend sync would need a new endpoint for segment deletion
+    // For now, segments are only deleted locally
+    toast.success('Сегмент удалён');
+  }, []);
+
   const updateSpeakerName = useCallback(async (
     fileId: string,
     oldName: string,
@@ -318,6 +336,7 @@ export function useTranscriptionApi() {
     startTranscription,
     startTranscriptionAll,
     updateSegment,
+    deleteSegment,
     updateSpeakerName,
     replaceAllText,
   };

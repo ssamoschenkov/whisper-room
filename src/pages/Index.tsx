@@ -28,6 +28,7 @@ export default function Index() {
     startTranscription,
     startTranscriptionAll,
     updateSegment,
+    deleteSegment,
     updateSpeakerName,
     replaceAllText,
   } = useTranscriptionApi();
@@ -37,11 +38,13 @@ export default function Index() {
     currentTime,
     duration,
     volume,
+    playbackRate,
     loadAudio,
     toggle,
     seekTo,
     seekToAndPlay,
     setVolume,
+    setPlaybackRate,
     skipForward,
     skipBackward,
   } = useAudioPlayer();
@@ -156,6 +159,9 @@ export default function Index() {
                   deleteFile(activeFile.id);
                   toast.success('Файл удалён');
                 }}
+                onDeleteSegment={(segmentId) =>
+                  deleteSegment(activeFile.id, segmentId)
+                }
               />
             </div>
             
@@ -165,9 +171,11 @@ export default function Index() {
                 currentTime={currentTime}
                 duration={duration || activeFile.duration || 0}
                 volume={volume}
+                playbackRate={playbackRate}
                 onTogglePlay={toggle}
                 onSeek={seekTo}
                 onVolumeChange={setVolume}
+                onPlaybackRateChange={setPlaybackRate}
                 onSkipForward={() => skipForward(10)}
                 onSkipBackward={() => skipBackward(10)}
               />

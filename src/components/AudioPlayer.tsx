@@ -1,6 +1,12 @@
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { formatTime } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
@@ -9,21 +15,27 @@ interface AudioPlayerProps {
   currentTime: number;
   duration: number;
   volume: number;
+  playbackRate: number;
   onTogglePlay: () => void;
   onSeek: (time: number) => void;
   onVolumeChange: (volume: number) => void;
+  onPlaybackRateChange: (rate: number) => void;
   onSkipForward: () => void;
   onSkipBackward: () => void;
 }
+
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 export function AudioPlayer({
   isPlaying,
   currentTime,
   duration,
   volume,
+  playbackRate,
   onTogglePlay,
   onSeek,
   onVolumeChange,
+  onPlaybackRateChange,
   onSkipForward,
   onSkipBackward,
 }: AudioPlayerProps) {
@@ -64,6 +76,33 @@ export function AudioPlayer({
             <SkipForward className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* Playback Speed */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 min-w-[52px] font-mono text-xs"
+            >
+              {playbackRate}x
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {PLAYBACK_RATES.map((rate) => (
+              <DropdownMenuItem
+                key={rate}
+                onClick={() => onPlaybackRateChange(rate)}
+                className={cn(
+                  "font-mono",
+                  rate === playbackRate && "bg-accent"
+                )}
+              >
+                {rate}x
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Time & Progress */}
         <div className="flex-1 flex items-center gap-3">
