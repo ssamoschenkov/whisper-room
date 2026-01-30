@@ -22,6 +22,7 @@ interface TranscriptionEditorProps {
   onUpdateSpeakerName: (oldName: string, newName: string) => void;
   onReplaceAll: (search: string, replace: string) => number | Promise<number>;
   onDeleteFile: () => void;
+  onDeleteSegment: (segmentId: string) => void;
 }
 
 export function TranscriptionEditor({
@@ -32,6 +33,7 @@ export function TranscriptionEditor({
   onUpdateSpeakerName,
   onReplaceAll,
   onDeleteFile,
+  onDeleteSegment,
 }: TranscriptionEditorProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -211,6 +213,7 @@ export function TranscriptionEditor({
                 <th className="px-4 py-3 w-24">Начало</th>
                 <th className="px-4 py-3 w-36">Голос</th>
                 <th className="px-4 py-3">Текст</th>
+                <th className="px-4 py-3 w-12"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -224,6 +227,7 @@ export function TranscriptionEditor({
                   onTimeClick={() => onSeekTo(segment.start)}
                   onUpdateText={(text) => onUpdateSegment(segment.id, { text })}
                   onUpdateSpeaker={(newName) => onUpdateSpeakerName(segment.speaker, newName)}
+                  onDelete={() => onDeleteSegment(segment.id)}
                 />
               ))}
             </tbody>
@@ -242,6 +246,7 @@ interface SegmentRowProps {
   onTimeClick: () => void;
   onUpdateText: (text: string) => void;
   onUpdateSpeaker: (name: string) => void;
+  onDelete: () => void;
 }
 
 function SegmentRow({
@@ -252,6 +257,7 @@ function SegmentRow({
   onTimeClick,
   onUpdateText,
   onUpdateSpeaker,
+  onDelete,
 }: SegmentRowProps) {
   const [editingSpeaker, setEditingSpeaker] = useState(false);
   const [editingText, setEditingText] = useState(false);
@@ -289,7 +295,7 @@ function SegmentRow({
     <tr
       data-segment-index={index}
       className={cn(
-        "hover:bg-muted/30 transition-colors",
+        "group hover:bg-muted/30 transition-colors",
         isActive && "bg-primary/5"
       )}
     >
@@ -335,6 +341,16 @@ function SegmentRow({
             {highlightText(segment.text)}
           </p>
         )}
+      </td>
+      <td className="px-4 py-3 align-top">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDelete}
+          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
       </td>
     </tr>
   );

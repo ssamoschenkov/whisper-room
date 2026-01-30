@@ -6,6 +6,7 @@ export function useAudioPlayer() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -80,6 +81,13 @@ export function useAudioPlayer() {
     setVolume(vol);
   }, []);
 
+  const setAudioPlaybackRate = useCallback((rate: number) => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
+    }
+    setPlaybackRate(rate);
+  }, []);
+
   const skipForward = useCallback((seconds: number = 10) => {
     if (audioRef.current) {
       const newTime = Math.min(audioRef.current.currentTime + seconds, duration);
@@ -99,6 +107,7 @@ export function useAudioPlayer() {
     currentTime,
     duration,
     volume,
+    playbackRate,
     loadAudio,
     play,
     pause,
@@ -106,6 +115,7 @@ export function useAudioPlayer() {
     seekTo,
     seekToAndPlay,
     setVolume: setAudioVolume,
+    setPlaybackRate: setAudioPlaybackRate,
     skipForward,
     skipBackward,
   };
