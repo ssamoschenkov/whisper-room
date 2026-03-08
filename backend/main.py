@@ -188,8 +188,8 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         compute_type = "float16" if device == "cuda" else "int8"
         
-        # Use medium model on CPU to save RAM (~5GB vs ~10GB for large-v3)
-        whisper_model_name = "large-v3" if device == "cuda" else "medium"
+        # 24GB RAM available — use large-v3 for best quality
+        whisper_model_name = "large-v3"
         # Use small batch size to reduce peak RAM
         batch_size = 8 if device == "cuda" else 4
         
