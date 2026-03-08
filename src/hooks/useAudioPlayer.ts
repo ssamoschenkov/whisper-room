@@ -7,6 +7,7 @@ export function useAudioPlayer() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [audioVersion, setAudioVersion] = useState(0);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -31,7 +32,7 @@ export function useAudioPlayer() {
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
     };
-  }, []);
+  }, [audioVersion]);
 
   const loadAudio = useCallback((url: string) => {
     if (!audioRef.current) {
@@ -41,6 +42,7 @@ export function useAudioPlayer() {
     audioRef.current.load();
     setCurrentTime(0);
     setIsPlaying(false);
+    setAudioVersion(v => v + 1);
   }, []);
 
   const play = useCallback(() => {

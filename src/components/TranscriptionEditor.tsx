@@ -299,12 +299,12 @@ function SegmentRow({
         isActive && "bg-primary/5"
       )}
     >
-      <td className="px-4 py-3 align-top">
+      <td className="px-4 py-2 align-top">
         <button onClick={onTimeClick} className="time-link">
           {formatTime(segment.start)}
         </button>
       </td>
-      <td className="px-4 py-3 align-top">
+      <td className="px-4 py-2 align-top">
         {editingSpeaker ? (
           <input
             autoFocus
@@ -323,7 +323,7 @@ function SegmentRow({
           </span>
         )}
       </td>
-      <td className="px-4 py-3 align-top">
+      <td className="px-4 py-2 align-top">
         {editingText ? (
           <textarea
             autoFocus
@@ -342,7 +342,7 @@ function SegmentRow({
           </p>
         )}
       </td>
-      <td className="px-4 py-3 align-top">
+      <td className="px-4 py-2 align-top">
         <Button
           variant="ghost"
           size="sm"

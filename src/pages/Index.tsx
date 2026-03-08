@@ -176,8 +176,8 @@ export default function Index() {
                 onSeek={seekTo}
                 onVolumeChange={setVolume}
                 onPlaybackRateChange={setPlaybackRate}
-                onSkipForward={() => skipForward(10)}
-                onSkipBackward={() => skipBackward(10)}
+onSkipForward={() => skipForward(60)}
+                onSkipBackward={() => skipBackward(60)}
               />
             )}
           </>
