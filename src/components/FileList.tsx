@@ -1,4 +1,5 @@
-import { Upload, Mic, Play, Trash2, Loader2, Server, ServerOff } from 'lucide-react';
+import { useState } from 'react';
+import { Upload, Mic, Play, Trash2, Loader2, Server, ServerOff, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -6,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { formatFileSize, formatDate, getFileExtension, getStatusLabel } from '@/utils/formatters';
 import type { AudioFile } from '@/types/transcription';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
 
 interface FileListProps {
   files: AudioFile[];
@@ -32,8 +34,11 @@ export function FileList({
   isRecording,
   isBackendAvailable,
 }: FileListProps) {
+  const [searchQuery, setSearchQuery] = useState('');
   const pendingCount = files.filter(f => f.status === 'pending').length;
-
+  const filteredFiles = files.filter(f => 
+    f.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   return (
     <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground">
       {/* Header */}
@@ -88,18 +93,45 @@ export function FileList({
             {isRecording ? 'Стоп' : 'Запись'}
           </Button>
         </div>
+
+        {/* Search */}
+        {files.length > 0 && (
+          <div className="relative mt-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-sidebar-muted" />
+            <Input
+              placeholder="Поиск файлов..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-xs bg-sidebar-accent border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-muted"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-sidebar-muted hover:text-sidebar-foreground"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* File List */}
       <div className="flex-1 overflow-y-auto">
-        {files.length === 0 ? (
+        {filteredFiles.length === 0 ? (
           <div className="p-4 text-center text-sidebar-muted">
-            <p className="text-sm">Нет файлов</p>
-            <p className="text-xs mt-1">Загрузите аудио или начните запись</p>
+            {files.length === 0 ? (
+              <>
+                <p className="text-sm">Нет файлов</p>
+                <p className="text-xs mt-1">Загрузите аудио или начните запись</p>
+              </>
+            ) : (
+              <p className="text-sm">Ничего не найдено</p>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-sidebar-border">
-            {files.map((file) => (
+            {filteredFiles.map((file) => (
               <FileRow
                 key={file.id}
                 file={file}
