@@ -43,7 +43,7 @@ if not token or token == "hf_ваш_токен_сюда":\n\
 else:\n\
     print("⬇️  Downloading diarization model...")\n\
     from pyannote.audio import Pipeline\n\
-    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=token)\n\
+    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", token=token)\n\
     del pipeline\n\
     print("✅ Diarization model downloaded!")' > /tmp/download_diarization.py && python /tmp/download_diarization.py
 
