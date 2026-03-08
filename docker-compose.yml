@@ -11,6 +11,13 @@ services:
     volumes:
       - transcriptor-data:/app/data
     restart: unless-stopped
+    # Лимит памяти: 8GB + 4GB swap для предотвращения OOM kill
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 2G
     # Раскомментируйте для GPU (NVIDIA):
     # deploy:
     #   resources:
