@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 
 # Thread pool for CPU-heavy transcription work
-transcription_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="transcribe")
+transcription_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcribe")
 
 logger = logging.getLogger("transcriptor")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
