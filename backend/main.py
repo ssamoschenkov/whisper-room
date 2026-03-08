@@ -7,12 +7,20 @@ import os
 import json
 import uuid
 import asyncio
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
 from contextlib import asynccontextmanager
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+
+# Thread pool for CPU-heavy transcription work
+transcription_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="transcribe")
+
+logger = logging.getLogger("transcriptor")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
@@ -153,15 +161,17 @@ def load_transcript(file_id: str) -> Optional[dict]:
     return None
 
 
-async def transcribe_audio(file_id: str, audio_path: Path, file_name: str):
-    """Background task for audio transcription using whisperx"""
+def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
+    """Synchronous transcription - runs in a thread pool to not block the event loop"""
     try:
         processing_queue[file_id] = {"status": "processing", "progress": 0}
+        logger.info(f"[{file_id}] Starting transcription for {file_name}")
         
         # Convert to WAV if needed
         wav_path = audio_path.with_suffix(".wav")
         if audio_path.suffix.lower() != ".wav":
             processing_queue[file_id]["progress"] = 10
+            logger.info(f"[{file_id}] Converting to WAV...")
             if not convert_to_wav(audio_path, wav_path):
                 raise Exception("FFmpeg conversion failed")
         else:
@@ -175,9 +185,11 @@ async def transcribe_audio(file_id: str, audio_path: Path, file_name: str):
         
         device = "cuda" if torch.cuda.is_available() else "cpu"
         compute_type = "float16" if device == "cuda" else "int8"
+        logger.info(f"[{file_id}] Using device: {device}, compute_type: {compute_type}")
         
         # Load model
         processing_queue[file_id]["progress"] = 30
+        logger.info(f"[{file_id}] Loading whisper model...")
         model = whisperx.load_model(
             "large-v3",
             device=device,
@@ -187,11 +199,13 @@ async def transcribe_audio(file_id: str, audio_path: Path, file_name: str):
         
         # Transcribe
         processing_queue[file_id]["progress"] = 50
+        logger.info(f"[{file_id}] Transcribing audio...")
         audio = whisperx.load_audio(str(wav_path))
         result = model.transcribe(audio, batch_size=16, language="ru")
         
         # Align whisper output
         processing_queue[file_id]["progress"] = 70
+        logger.info(f"[{file_id}] Aligning segments...")
         model_a, metadata = whisperx.load_align_model(
             language_code="ru",
             device=device
@@ -207,6 +221,7 @@ async def transcribe_audio(file_id: str, audio_path: Path, file_name: str):
         
         # Diarization (speaker detection)
         processing_queue[file_id]["progress"] = 85
+        logger.info(f"[{file_id}] Running speaker diarization...")
         diarize_model = whisperx.DiarizationPipeline(device=device)
         diarize_segments = diarize_model(audio)
         result = whisperx.assign_word_speakers(diarize_segments, result)
@@ -246,14 +261,27 @@ async def transcribe_audio(file_id: str, audio_path: Path, file_name: str):
         save_transcript(file_id, transcript_data)
         
         processing_queue[file_id] = {"status": "ready", "progress": 100}
+        logger.info(f"[{file_id}] Transcription complete! {len(segments)} segments found.")
         
         # Cleanup temporary WAV if we created it
         if wav_path != audio_path and wav_path.exists():
             wav_path.unlink()
             
     except Exception as e:
-        print(f"Transcription error: {e}")
+        logger.error(f"[{file_id}] Transcription error: {e}", exc_info=True)
         processing_queue[file_id] = {"status": "error", "progress": 0, "error": str(e)}
+
+
+async def transcribe_audio(file_id: str, audio_path: Path, file_name: str):
+    """Run transcription in thread pool to keep event loop responsive"""
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        transcription_executor,
+        _transcribe_sync,
+        file_id,
+        audio_path,
+        file_name,
+    )
 
 
 # API Endpoints
