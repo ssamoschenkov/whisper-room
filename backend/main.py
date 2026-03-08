@@ -7,12 +7,20 @@ import os
 import json
 import uuid
 import asyncio
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
 from contextlib import asynccontextmanager
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+
+# Thread pool for CPU-heavy transcription work
+transcription_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="transcribe")
+
+logger = logging.getLogger("transcriptor")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
