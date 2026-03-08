@@ -164,6 +164,8 @@ def load_transcript(file_id: str) -> Optional[dict]:
 def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
     """Synchronous transcription - runs in a thread pool to not block the event loop"""
     try:
+        import gc
+        
         processing_queue[file_id] = {"status": "processing", "progress": 0}
         logger.info(f"[{file_id}] Starting transcription for {file_name}")
         
@@ -185,13 +187,19 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         
         device = "cuda" if torch.cuda.is_available() else "cpu"
         compute_type = "float16" if device == "cuda" else "int8"
-        logger.info(f"[{file_id}] Using device: {device}, compute_type: {compute_type}")
+        
+        # Use medium model on CPU to save RAM (~5GB vs ~10GB for large-v3)
+        whisper_model_name = "large-v3" if device == "cuda" else "medium"
+        # Use small batch size to reduce peak RAM
+        batch_size = 8 if device == "cuda" else 4
+        
+        logger.info(f"[{file_id}] Device: {device}, model: {whisper_model_name}, batch_size: {batch_size}")
         
         # Load model
         processing_queue[file_id]["progress"] = 30
         logger.info(f"[{file_id}] Loading whisper model...")
         model = whisperx.load_model(
-            "large-v3",
+            whisper_model_name,
             device=device,
             compute_type=compute_type,
             language="ru"
@@ -201,7 +209,14 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         processing_queue[file_id]["progress"] = 50
         logger.info(f"[{file_id}] Transcribing audio...")
         audio = whisperx.load_audio(str(wav_path))
-        result = model.transcribe(audio, batch_size=16, language="ru")
+        result = model.transcribe(audio, batch_size=batch_size, language="ru")
+        
+        # Free whisper model immediately to reclaim RAM
+        del model
+        gc.collect()
+        if device == "cuda":
+            torch.cuda.empty_cache()
+        logger.info(f"[{file_id}] Whisper model unloaded, RAM freed")
         
         # Align whisper output
         processing_queue[file_id]["progress"] = 70
@@ -219,12 +234,25 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
             return_char_alignments=False
         )
         
-        # Diarization (speaker detection)
+        # Free alignment model
+        del model_a, metadata
+        gc.collect()
+        
+        # Diarization (speaker detection) - skip if not enough RAM
         processing_queue[file_id]["progress"] = 85
-        logger.info(f"[{file_id}] Running speaker diarization...")
-        diarize_model = whisperx.DiarizationPipeline(device=device)
-        diarize_segments = diarize_model(audio)
-        result = whisperx.assign_word_speakers(diarize_segments, result)
+        try:
+            logger.info(f"[{file_id}] Running speaker diarization...")
+            diarize_model = whisperx.DiarizationPipeline(device=device)
+            diarize_segments = diarize_model(audio)
+            result = whisperx.assign_word_speakers(diarize_segments, result)
+            del diarize_model, diarize_segments
+            gc.collect()
+        except Exception as diar_err:
+            logger.warning(f"[{file_id}] Diarization skipped (not enough RAM or no HF token): {diar_err}")
+        
+        # Free audio array
+        del audio
+        gc.collect()
         
         # Format segments
         segments = []
