@@ -13,28 +13,40 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # HuggingFace token for downloading pyannote diarization model
-# Pass at build time: docker-compose build --build-arg HF_TOKEN=hf_xxxxx
 ARG HF_TOKEN
 ENV HF_TOKEN=$HF_TOKEN
 
-# Pre-download all models during build (requires internet at build time only)
+# Step 1: Download whisper model
 RUN python -c "\
-import os; \
-os.environ['HF_TOKEN'] = os.environ.get('HF_TOKEN', ''); \
 import whisperx; \
 import torch; \
-device = 'cpu'; \
 print('⬇️  Downloading whisper large-v3 model...'); \
-model = whisperx.load_model('large-v3', device=device, compute_type='int8', language='ru'); \
+model = whisperx.load_model('large-v3', device='cpu', compute_type='int8', language='ru'); \
 del model; \
+print('✅ Whisper model downloaded!'); \
+"
+
+# Step 2: Download alignment model
+RUN python -c "\
+import whisperx; \
 print('⬇️  Downloading alignment model for Russian...'); \
-model_a, metadata = whisperx.load_align_model(language_code='ru', device=device); \
+model_a, metadata = whisperx.load_align_model(language_code='ru', device='cpu'); \
 del model_a, metadata; \
-print('⬇️  Downloading diarization model...'); \
-from pyannote.audio import Pipeline; \
-pipeline = Pipeline.from_pretrained('pyannote/speaker-diarization-3.1', use_auth_token=os.environ['HF_TOKEN']); \
-del pipeline; \
-print('✅ All models downloaded!'); \
+print('✅ Alignment model downloaded!'); \
+"
+
+# Step 3: Download diarization model (requires HF_TOKEN)
+RUN python -c "\
+import os; \
+token = os.environ.get('HF_TOKEN', ''); \
+if not token or token == 'hf_ваш_токен_сюда': \
+    print('⚠️  HF_TOKEN not set, skipping diarization model'); \
+else: \
+    print('⬇️  Downloading diarization model...'); \
+    from pyannote.audio import Pipeline; \
+    pipeline = Pipeline.from_pretrained('pyannote/speaker-diarization-3.1', use_auth_token=token); \
+    del pipeline; \
+    print('✅ Diarization model downloaded!'); \
 "
 
 # Copy application
