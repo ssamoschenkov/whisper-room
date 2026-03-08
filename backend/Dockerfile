@@ -12,9 +12,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download WhisperX models during build (requires internet at build time only)
-# After this, the container works fully offline
+# HuggingFace token for downloading pyannote diarization model
+# Pass at build time: docker-compose build --build-arg HF_TOKEN=hf_xxxxx
+ARG HF_TOKEN
+ENV HF_TOKEN=$HF_TOKEN
+
+# Pre-download all models during build (requires internet at build time only)
 RUN python -c "\
+import os; \
+os.environ['HF_TOKEN'] = os.environ.get('HF_TOKEN', ''); \
 import whisperx; \
 import torch; \
 device = 'cpu'; \
@@ -24,6 +30,10 @@ del model; \
 print('⬇️  Downloading alignment model for Russian...'); \
 model_a, metadata = whisperx.load_align_model(language_code='ru', device=device); \
 del model_a, metadata; \
+print('⬇️  Downloading diarization model...'); \
+from pyannote.audio import Pipeline; \
+pipeline = Pipeline.from_pretrained('pyannote/speaker-diarization-3.1', use_auth_token=os.environ['HF_TOKEN']); \
+del pipeline; \
 print('✅ All models downloaded!'); \
 "
 
@@ -33,8 +43,6 @@ COPY main.py .
 # Create data directories
 RUN mkdir -p data/uploads data/transcripts
 
-# Expose port
 EXPOSE 8000
 
-# Run server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
