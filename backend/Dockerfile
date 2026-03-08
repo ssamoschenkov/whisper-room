@@ -16,14 +16,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 ARG HF_TOKEN
 ENV HF_TOKEN=$HF_TOKEN
 
-# Step 1: Download whisper model (medium for CPU to save RAM)
+# Step 1: Download whisper model (large-v3 for best quality)
 RUN python -c "\
 import whisperx; \
 import torch; \
-print('⬇️  Downloading whisper medium model...'); \
-model = whisperx.load_model('medium', device='cpu', compute_type='int8', language='ru'); \
+print('⬇️  Downloading whisper large-v3 model...'); \
+model = whisperx.load_model('large-v3', device='cpu', compute_type='int8', language='ru'); \
 del model; \
-print('✅ Whisper medium model downloaded!'); \
+print('✅ Whisper large-v3 model downloaded!'); \
 "
 
 # Step 2: Download alignment model
