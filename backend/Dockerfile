@@ -36,18 +36,16 @@ print('✅ Alignment model downloaded!'); \
 "
 
 # Step 3: Download diarization model (requires HF_TOKEN)
-RUN python -c "\
-import os; \
-token = os.environ.get('HF_TOKEN', ''); \
-if not token or token == 'hf_ваш_токен_сюда': \
-    print('⚠️  HF_TOKEN not set, skipping diarization model'); \
-else: \
-    print('⬇️  Downloading diarization model...'); \
-    from pyannote.audio import Pipeline; \
-    pipeline = Pipeline.from_pretrained('pyannote/speaker-diarization-3.1', use_auth_token=token); \
-    del pipeline; \
-    print('✅ Diarization model downloaded!'); \
-"
+RUN echo 'import os\n\
+token = os.environ.get("HF_TOKEN", "")\n\
+if not token or token == "hf_ваш_токен_сюда":\n\
+    print("⚠️  HF_TOKEN not set, skipping diarization model")\n\
+else:\n\
+    print("⬇️  Downloading diarization model...")\n\
+    from pyannote.audio import Pipeline\n\
+    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1", use_auth_token=token)\n\
+    del pipeline\n\
+    print("✅ Diarization model downloaded!")' > /tmp/download_diarization.py && python /tmp/download_diarization.py
 
 # Copy application
 COPY main.py .
