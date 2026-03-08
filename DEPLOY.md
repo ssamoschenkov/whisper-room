@@ -3,84 +3,81 @@
 ## Требования
 
 - [Docker](https://docs.docker.com/get-docker/) и [Docker Compose](https://docs.docker.com/compose/install/)
-- ~10 ГБ свободного места (для моделей WhisperX)
-- Интернет при **первом** запуске (загрузка моделей)
+- ~10 ГБ свободного места (для моделей)
+- Интернет **только при первой сборке** (потом работает офлайн)
 
 ## Быстрый старт
 
+### 1. Подготовка HuggingFace (для распознавания голосов)
+
+1. Зарегистрируйтесь на [huggingface.co](https://huggingface.co/join)
+2. Примите лицензии (нажмите "Agree" на каждой странице):
+   - [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
+   - [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0)
+3. Создайте токен: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → **New token** → тип **Read**
+
+### 2. Запуск
+
 ```bash
-# 1. Клонируйте репозиторий
+# Клонируйте репозиторий
 git clone <URL_ВАШЕГО_РЕПОЗИТОРИЯ>
 cd <ПАПКА_ПРОЕКТА>
 
-# 2. Запустите (первый раз может занять 10-15 минут)
-docker-compose up -d
+# Создайте файл с токеном
+cp .env.docker .env
+nano .env   # Вставьте ваш HF_TOKEN=hf_xxxxx
 
-# 3. Готово! Откройте в браузере:
-#    http://localhost
-#    или http://<IP_СЕРВЕРА> с других устройств в сети
+# Запустите (первый раз ~15-30 минут, скачиваются модели)
+docker-compose up -d --build
+
+# Готово! Откройте:
+# http://localhost       — с этого компьютера
+# http://<IP_сервера>   — с других устройств в сети
 ```
 
-## Остановка и запуск
+### 3. Проверка
+
+```bash
+# Убедитесь, что оба контейнера запущены
+docker-compose ps
+
+# Посмотрите логи
+docker-compose logs -f
+```
+
+## Повседневные команды
 
 ```bash
 # Остановить
 docker-compose down
 
-# Запустить снова
+# Запустить
 docker-compose up -d
 
-# Посмотреть логи
-docker-compose logs -f
+# Перезапустить
+docker-compose restart
 
-# Посмотреть логи только бэкенда
-docker-compose logs -f backend
-```
-
-## Обновление
-
-```bash
-git pull
+# Обновить после git pull
 docker-compose up -d --build
 ```
 
-## Использование GPU (NVIDIA)
+## GPU (NVIDIA) — опционально
 
-Для ускорения транскрибации с GPU:
+Ускоряет транскрибацию в 5-10 раз:
 
 1. Установите [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 2. Раскомментируйте секцию `deploy` в `docker-compose.yml`
-3. Перезапустите: `docker-compose up -d --build`
+3. `docker-compose up -d --build`
 
 ## Данные
 
-Все данные (аудиофайлы и транскрипции) хранятся в Docker volume `transcriptor-data`.
-
-```bash
-# Посмотреть где хранятся данные
-docker volume inspect <ПАПКА>_transcriptor-data
-```
-
-## Доступ из локальной сети
-
-Приложение автоматически доступно по IP сервера на порту 80. Узнайте IP:
-
-```bash
-hostname -I
-```
-
-Откройте `http://<IP>` на любом устройстве в сети.
+Аудиофайлы и транскрипции хранятся в Docker volume `transcriptor-data` и не пропадут при обновлении.
 
 ## Устранение проблем
 
-```bash
-# Проверить статус контейнеров
-docker-compose ps
-
-# Перезапустить всё
-docker-compose restart
-
-# Полная пересборка
-docker-compose down
-docker-compose up -d --build
-```
+| Проблема | Решение |
+|----------|---------|
+| Контейнер не запускается | `docker-compose logs backend` — посмотреть ошибку |
+| Модели не скачались | Проверьте HF_TOKEN и что лицензии приняты |
+| Нет доступа с других устройств | `sudo ufw allow 80` |
+| Мало памяти | Нужно минимум 4 ГБ RAM (8 ГБ рекомендуется) |
