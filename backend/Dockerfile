@@ -16,14 +16,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 ARG HF_TOKEN
 ENV HF_TOKEN=$HF_TOKEN
 
-# Step 1: Download whisper model (large-v3 for best quality)
+# Step 1: Download whisper model (medium — fast + good quality for Russian)
 RUN python -c "\
 import whisperx; \
 import torch; \
-print('⬇️  Downloading whisper large-v3 model...'); \
-model = whisperx.load_model('large-v3', device='cpu', compute_type='int8', language='ru'); \
+print('⬇️  Downloading whisper medium model...'); \
+model = whisperx.load_model('medium', device='cpu', compute_type='int8', language='ru'); \
 del model; \
-print('✅ Whisper large-v3 model downloaded!'); \
+print('✅ Whisper medium model downloaded!'); \
 "
 
 # Step 2: Download alignment model
