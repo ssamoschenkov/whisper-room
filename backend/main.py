@@ -161,6 +161,43 @@ def load_transcript(file_id: str) -> Optional[dict]:
     return None
 
 
+
+
+def _create_diarization_pipeline(whisperx_module, device: str, hf_token: Optional[str]):
+    """Create diarization pipeline compatible with different whisperx versions."""
+    pipeline_classes = []
+
+    # whisperx <=3.3 sometimes exposes class on root module
+    root_pipeline = getattr(whisperx_module, "DiarizationPipeline", None)
+    if root_pipeline:
+        pipeline_classes.append(root_pipeline)
+
+    # whisperx >=3.3.4 exposes class in whisperx.diarize
+    try:
+        from whisperx.diarize import DiarizationPipeline as submodule_pipeline
+        pipeline_classes.append(submodule_pipeline)
+    except Exception:
+        pass
+
+    if not pipeline_classes:
+        raise RuntimeError("DiarizationPipeline not found in installed whisperx version")
+
+    token_keys = ["use_auth_token", "token", "auth_token", "hf_token", None]
+    last_error = None
+
+    for pipeline_cls in pipeline_classes:
+        for token_key in token_keys:
+            kwargs = {"device": device}
+            if hf_token and token_key:
+                kwargs[token_key] = hf_token
+            try:
+                return pipeline_cls(**kwargs)
+            except TypeError as e:
+                last_error = e
+
+    raise RuntimeError(f"Unable to initialize diarization pipeline: {last_error}")
+
+
 def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
     """Synchronous transcription - runs in a thread pool to not block the event loop"""
     try:
