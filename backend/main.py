@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 
 # Thread pool for CPU-heavy transcription work
-transcription_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcribe")
+transcription_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="transcribe")
 
 logger = logging.getLogger("transcriptor")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -188,10 +188,10 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         compute_type = "float16" if device == "cuda" else "int8"
         
-        # large-v3 quality with conservative RAM profile for 8GB cgroup limits
+        # 24GB RAM available — use large-v3 for best quality
         whisper_model_name = "large-v3"
-        # CPU: batch_size=4 keeps peak memory stable; GPU can use larger batches
-        batch_size = 16 if device == "cuda" else 4
+        # Use small batch size to reduce peak RAM
+        batch_size = 8 if device == "cuda" else 4
         
         logger.info(f"[{file_id}] Device: {device}, model: {whisper_model_name}, batch_size: {batch_size}")
         
