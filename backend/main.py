@@ -275,20 +275,21 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         del model_a, metadata
         gc.collect()
         
-        # Diarization (speaker detection) - skip if not enough RAM
+        # Diarization (speaker detection) - skip if not enough RAM / model/token issues
         processing_queue[file_id]["progress"] = 85
         try:
             logger.info(f"[{file_id}] Running speaker diarization...")
-            from whisperx.diarize import DiarizationPipeline
             hf_token = os.environ.get("HF_TOKEN")
             logger.info(f"[{file_id}] HF_TOKEN present: {bool(hf_token)}")
-            diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=device)
+
+            diarize_model = _create_diarization_pipeline(whisperx, device, hf_token)
             diarize_segments = diarize_model(audio)
             result = whisperx.assign_word_speakers(diarize_segments, result)
+
             del diarize_model, diarize_segments
             gc.collect()
         except Exception as diar_err:
-            logger.warning(f"[{file_id}] Diarization skipped (not enough RAM or no HF token): {diar_err}")
+            logger.warning(f"[{file_id}] Diarization skipped: {diar_err}")
         
         # Free audio array
         del audio
