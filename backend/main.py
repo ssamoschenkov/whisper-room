@@ -242,7 +242,10 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         processing_queue[file_id]["progress"] = 85
         try:
             logger.info(f"[{file_id}] Running speaker diarization...")
-            diarize_model = whisperx.DiarizationPipeline(device=device, use_auth_token=os.environ.get("HF_TOKEN"))
+            from whisperx.diarize import DiarizationPipeline
+            hf_token = os.environ.get("HF_TOKEN")
+            logger.info(f"[{file_id}] HF_TOKEN present: {bool(hf_token)}")
+            diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=device)
             diarize_segments = diarize_model(audio)
             result = whisperx.assign_word_speakers(diarize_segments, result)
             del diarize_model, diarize_segments
