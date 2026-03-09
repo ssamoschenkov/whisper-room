@@ -161,6 +161,43 @@ def load_transcript(file_id: str) -> Optional[dict]:
     return None
 
 
+
+
+def _create_diarization_pipeline(whisperx_module, device: str, hf_token: Optional[str]):
+    """Create diarization pipeline compatible with different whisperx versions."""
+    pipeline_classes = []
+
+    # whisperx <=3.3 sometimes exposes class on root module
+    root_pipeline = getattr(whisperx_module, "DiarizationPipeline", None)
+    if root_pipeline:
+        pipeline_classes.append(root_pipeline)
+
+    # whisperx >=3.3.4 exposes class in whisperx.diarize
+    try:
+        from whisperx.diarize import DiarizationPipeline as submodule_pipeline
+        pipeline_classes.append(submodule_pipeline)
+    except Exception:
+        pass
+
+    if not pipeline_classes:
+        raise RuntimeError("DiarizationPipeline not found in installed whisperx version")
+
+    token_keys = ["use_auth_token", "token", "auth_token", "hf_token", None]
+    last_error = None
+
+    for pipeline_cls in pipeline_classes:
+        for token_key in token_keys:
+            kwargs = {"device": device}
+            if hf_token and token_key:
+                kwargs[token_key] = hf_token
+            try:
+                return pipeline_cls(**kwargs)
+            except TypeError as e:
+                last_error = e
+
+    raise RuntimeError(f"Unable to initialize diarization pipeline: {last_error}")
+
+
 def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
     """Synchronous transcription - runs in a thread pool to not block the event loop"""
     try:
@@ -238,20 +275,21 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         del model_a, metadata
         gc.collect()
         
-        # Diarization (speaker detection) - skip if not enough RAM
+        # Diarization (speaker detection) - skip if not enough RAM / model/token issues
         processing_queue[file_id]["progress"] = 85
         try:
             logger.info(f"[{file_id}] Running speaker diarization...")
-            from whisperx.diarize import DiarizationPipeline
             hf_token = os.environ.get("HF_TOKEN")
             logger.info(f"[{file_id}] HF_TOKEN present: {bool(hf_token)}")
-            diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=device)
+
+            diarize_model = _create_diarization_pipeline(whisperx, device, hf_token)
             diarize_segments = diarize_model(audio)
             result = whisperx.assign_word_speakers(diarize_segments, result)
+
             del diarize_model, diarize_segments
             gc.collect()
         except Exception as diar_err:
-            logger.warning(f"[{file_id}] Diarization skipped (not enough RAM or no HF token): {diar_err}")
+            logger.warning(f"[{file_id}] Diarization skipped: {diar_err}")
         
         # Free audio array
         del audio
