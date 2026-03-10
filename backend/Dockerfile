@@ -1,9 +1,15 @@
-FROM python:3.10-slim
+# CUDA 11.8 base for NVIDIA Tesla T4 GPU acceleration
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
-# Install system dependencies
+# Install Python 3.10 and system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3.10-venv \
+    python3-pip \
     ffmpeg \
     git \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python \
+    && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -60,6 +66,10 @@ COPY main.py .
 
 # Create data directories
 RUN mkdir -p data/uploads data/transcripts
+
+# NVIDIA runtime env
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 EXPOSE 8000
 
