@@ -1,31 +1,24 @@
-version: "3.8"
-
 services:
   backend:
     build:
       context: ./backend
       args:
-        HF_TOKEN: ${HF_TOKEN}  # Передаётся из .env файла
+        HF_TOKEN: ${HF_TOKEN}
     environment:
       - HF_TOKEN=${HF_TOKEN}
     volumes:
       - transcriptor-data:/app/data
     restart: unless-stopped
-    # Лимит памяти: 8GB + 4GB swap для предотвращения OOM kill
+    # Tesla T4 GPU — 16GB VRAM
     deploy:
       resources:
-        limits:
-          memory: 8G
         reservations:
-          memory: 2G
-    # Раскомментируйте для GPU (NVIDIA):
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 14G
 
   frontend:
     build:

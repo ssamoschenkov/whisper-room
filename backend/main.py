@@ -225,10 +225,10 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         compute_type = "float16" if device == "cuda" else "int8"
         
-        # 24GB RAM available — use large-v3 for best quality
+        # Tesla T4 (16GB VRAM) — large-v3 fits with float16 (~10GB)
         whisper_model_name = "large-v3"
-        # Use small batch size to reduce peak RAM
-        batch_size = 8 if device == "cuda" else 4
+        # T4 GPU: batch 16 for speed; CPU fallback: 4 to limit RAM
+        batch_size = 16 if device == "cuda" else 4
         
         logger.info(f"[{file_id}] Device: {device}, model: {whisper_model_name}, batch_size: {batch_size}")
         
