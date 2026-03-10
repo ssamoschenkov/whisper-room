@@ -225,10 +225,10 @@ def _transcribe_sync(file_id: str, audio_path: Path, file_name: str):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         compute_type = "float16" if device == "cuda" else "int8"
         
-        # medium — best speed/quality trade-off for Russian on CPU
-        whisper_model_name = "medium"
-        # Larger batch for medium model (less RAM needed)
-        batch_size = 16 if device == "cuda" else 8
+        # 24GB RAM available — use large-v3 for best quality
+        whisper_model_name = "large-v3"
+        # Use small batch size to reduce peak RAM
+        batch_size = 8 if device == "cuda" else 4
         
         logger.info(f"[{file_id}] Device: {device}, model: {whisper_model_name}, batch_size: {batch_size}")
         
